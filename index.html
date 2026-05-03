@@ -1064,6 +1064,39 @@ strong {
   font-weight: 600;
 }
 
+/* B 方案展平后: .tr-note 被 splitChapterBodies 拆成 .tr-note-head + N 个 .tr-note-p
+   作为兄弟节点参与 column-fill, 这样多个 p 可以分到不同列/page.
+   .tr-note-head 接管原 .tr-note 的 border-top + padding-top + .tn-label */
+.tr-note-head {
+  border-top: 1px solid var(--hairline);
+  margin-top: 32px;
+  padding-top: 14px;
+  break-after: avoid-column;  /* "译者注" 标题不要跟后面的 p 分到不同列 */
+  break-inside: avoid-column;
+}
+.tr-note-head .tn-label {
+  font-family: var(--display-cn);
+  font-size: 12.5px;
+  color: var(--accent);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  display: block;
+}
+.tr-note-p {
+  font-size: 12.5px;
+  line-height: 1.7;
+  text-indent: 0;
+  margin: 0 0 6px 0;
+  color: var(--muted);
+  break-inside: avoid-column;
+}
+.tr-note-p .tn-num {
+  color: var(--accent);
+  font-family: var(--serif-en);
+  margin-right: 0.4em;
+  font-weight: 600;
+}
+
 /* ============================================================
    15. 表格
    ============================================================ */
@@ -18537,9 +18570,36 @@ Iomega 历史最高收盘价出现在 1996 年 5 月 23 日——股票于其前
       const folio = original.querySelector(':scope > .folio');
       
       // 收集需要分页的内容节点 (除 running-head/folio 外的所有子节点)
-      const contentNodes = Array.from(original.childNodes).filter(n => {
-        if (n === runningHead || n === folio) return false;
-        return true;
+      // 特殊处理 .tr-note: 它内部多个 p 总高常超过一列, 整体当一个 child
+      // 会被 column-fill 当一组 break-inside-avoid 推到一列内, 但内容溢出被裁.
+      // 解决: 把 .tr-note 拆开 — 第一个 p 前注入 .tn-label-marker (含"译者注"+border),
+      // 后续 p 都独立成兄弟节点参与 column 分页.
+      const contentNodes = [];
+      Array.from(original.childNodes).forEach(n => {
+        if (n === runningHead || n === folio) return;
+        if (n.nodeType === 1 && n.classList && n.classList.contains('tr-note')) {
+          // 展平 .tr-note: 把 .tn-label 提出来当独立节点, p 子级也独立
+          const label = n.querySelector(':scope > .tn-label');
+          const ps = Array.from(n.querySelectorAll(':scope > p'));
+          // 把 label 转成 div 包裹器 (保留 .tr-note border-top + padding-top)
+          // 简单做: 把第一个 p 加 .tn-first 类 (CSS 处理 border-top + label inline)
+          if (ps.length > 0) {
+            // 创建一个新的 .tr-note-head 节点带 label
+            if (label) {
+              const head = document.createElement('div');
+              head.className = 'tr-note-head';
+              head.appendChild(label.cloneNode(true));
+              contentNodes.push(head);
+            }
+            // 每个 p 用 .tr-note-p 类标记 (CSS 继承 .tr-note p 的样式)
+            ps.forEach(p => {
+              p.classList.add('tr-note-p');
+              contentNodes.push(p);
+            });
+          }
+          return;
+        }
+        contentNodes.push(n);
       });
       
       if (contentNodes.length === 0) {
