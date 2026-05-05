@@ -17,6 +17,8 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Noto+Serif+SC:wght@300;400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Noto+Serif+SC:wght@300;400;500;600;700&display=swap"></noscript>
 <style>
 /* ============================================================
    Trading and Exchanges · Reader 模式
@@ -29,8 +31,6 @@
    - 主色: 棕红 #8B3A2A · 奶油白 #FAF6EE · 灰褐 #E8DFD2
    - 黑底 Part 扉页: 暖炭黑 + 古典金 + 强红
    ============================================================ */
-
-@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Noto+Serif+SC:wght@300;400;500;600;700&display=swap');
 
 /* ============================================================
    1. 设计令牌
@@ -62,13 +62,13 @@
 
   /* 字体 */
   --serif-cn:   "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", serif;
-  --serif-en:   "EB Garamond", "Cormorant Garamond", "Garamond", "Times New Roman", serif;
+  --serif-en:   "EB Garamond", "Cormorant Garamond", "Garamond", "Georgia", "Times New Roman", serif;
   --display-cn: "Noto Serif SC", "Source Han Serif SC", "Songti SC", "STSong", serif;
-  --display-en: "Cormorant Garamond", "EB Garamond", "Garamond", serif;
+  --display-en: "Cormorant Garamond", "EB Garamond", "Garamond", "Georgia", serif;
 
   /* 字号 / 行高 (CSS 变量,响应式覆盖) */
-  --body-font:   15.5px;
-  --body-line:   1.92;
+  --body-font:   16px;
+  --body-line:   1.95;
   --body-indent: 2em;
 
   /* 翻页过渡 */
@@ -393,7 +393,7 @@ html, body {
   font-style: italic;
   color: var(--muted);
   font-weight: 500;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.015em;
   margin-bottom: 12px;
 }
 .cover .subtitle-en {
@@ -402,7 +402,7 @@ html, body {
   font-style: italic;
   color: var(--muted);
   font-weight: 400;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.015em;
   margin-bottom: 140px;
 }
 .cover .author-en {
@@ -733,11 +733,13 @@ html, body {
 /* B 方案: chapter-body-page 的内容容器, 占满 page 的 padding box */
 .chapter-body-content {
   height: 100%;
-  /* 不需要 column 布局 (每页一列) */
-  column-fill: unset;
+  /* 不需要 column 布局 (每页一列). 这里用 column-count: 1 + column-fill: auto
+     是为了保证浏览器"按单列填充", 不会把内容推到隐藏列. 列宽继承 width. */
   column-count: 1;
+  column-fill: auto;
   column-width: auto;
-  /* 内容溢出时直接裁掉 (理论上分页测量后不会溢出) */
+  column-gap: 0;
+  /* 内容溢出时直接裁掉 (理论上分页测量后不会溢出, 实际由溢出修正逻辑兜底) */
   overflow: hidden;
 }
 
@@ -918,7 +920,9 @@ strong {
   background: rgba(139, 58, 42, 0.05);
   border-left: 3px solid var(--accent);
   border-right: 1px solid var(--hairline);
+  /* 短 sidebar 保持完整盒子; 长 sidebar 已在 JS 中展平为 sidebar-flat-* 后再分页. */
   break-inside: avoid-column;
+  page-break-inside: avoid;
   position: relative;
 }
 .sidebar .sidebar-title {
@@ -952,6 +956,7 @@ strong {
   text-indent: 2em;
   margin: 0 0 7px 0;
   font-weight: 300;
+  break-inside: auto;
 }
 /* sidebar-end ◀ 改为绝对定位,贴右下角 */
 .sidebar .sidebar-end {
@@ -966,6 +971,58 @@ strong {
 }
 .sidebar > p:last-of-type {
   margin-bottom: 12px;
+}
+
+/* B 方案展平后: 长 sidebar 被 splitChapterBodies 拆成 .sidebar-flat-head + N 个 .sidebar-flat-body
+   作为兄弟节点参与 column-fill, 让 sidebar 真正能跨页. 失去 border-box 容器感,
+   保留淡棕红左边线 + 标题视觉, 仍然能识别"这是 sidebar". */
+.sidebar-flat-head {
+  margin: 30px -10px 0 -10px;
+  padding: 22px 28px 8px;
+  background: rgba(139, 58, 42, 0.05);
+  border-left: 3px solid var(--accent);
+  break-after: avoid-column;  /* 标题别跟内容分开 */
+  break-inside: avoid-column;
+}
+.sidebar-flat-head .sidebar-title {
+  font-family: var(--display-cn);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.10em;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.sidebar-flat-head .sidebar-title::before {
+  content: "▶";
+  color: var(--accent);
+  font-size: 13px;
+}
+.sidebar-flat-head .sidebar-title-en {
+  font-family: var(--display-en);
+  font-style: italic;
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 25px;
+}
+.sidebar-flat-body {
+  margin: 0 -10px;
+  padding: 6px 28px;
+  background: rgba(139, 58, 42, 0.05);
+  border-left: 3px solid var(--accent);
+  font-size: 14px;
+  line-height: 1.85;
+  text-indent: 2em;
+  font-weight: 300;
+  break-inside: auto;
+}
+/* 最后一段 sidebar-flat-body 加底 padding 收尾视觉 */
+.sidebar-flat-body:last-of-type,
+.sidebar-flat-body + :not(.sidebar-flat-body) {
+  /* 这个不太好用 :last-of-type 因为 sibling 是 mixed; 简单加底 margin 兜 */
 }
 
 /* ============================================================
@@ -1026,6 +1083,34 @@ strong {
   color: var(--muted);
   font-size: 0.92em;
   margin-left: 6px;
+}
+
+/* ============================================================
+   13b. 核心主题列表 / 术语列表 (1.5 节这种"红色术语 + italic 英文 + 解释"的清单)
+   ============================================================ */
+.theme-list, .term-list {
+  margin: 24px 0 0 0;
+}
+.theme-item, .term-item {
+  margin: 0 0 18px 0;
+  text-indent: 2em;
+  break-inside: avoid-column;
+}
+.theme-item .theme-name, .term-item .term-name {
+  font-family: var(--display-cn);
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  margin-right: 0.4em;
+}
+.theme-item .theme-name-en, .term-item .term-name-en {
+  font-family: var(--display-en);
+  font-style: italic;
+  font-weight: 400;
+  color: var(--accent-deep);
+  letter-spacing: 0.02em;
+  font-size: 0.92em;
+  margin-right: 0.6em;
 }
 
 /* ============================================================
@@ -1245,14 +1330,272 @@ strong {
 }
 
 /* ============================================================
+   17b. 表格 / 图表 (.figure-table 容器)
+   ============================================================ */
+/* 通用表格容器: <div class="figure-table"> 包标签 + 标题 + table */
+.figure-table {
+  margin: 24px 0 28px 0;
+  break-inside: avoid-column;
+  font-family: var(--serif-cn);
+  font-weight: 300;
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.7;
+}
+.figure-table-label {
+  font-family: var(--display-en);
+  font-style: italic;
+  font-weight: 600;
+  color: var(--accent);
+  font-size: 11.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.figure-table-title {
+  font-family: var(--display-cn);
+  font-weight: 500;
+  color: var(--ink);
+  font-size: 14.5px;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--hairline);
+  padding-bottom: 6px;
+}
+/* figure-table 内的 table 自身样式 */
+.figure-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--serif-cn);
+  font-weight: 300;
+  font-size: 13px;
+}
+.figure-table th, .figure-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--hairline);
+  text-align: left;
+  vertical-align: top;
+}
+.figure-table th {
+  font-family: var(--display-cn);
+  font-weight: 500;
+  color: var(--accent);
+  border-top: 1.5px solid var(--accent);
+  border-bottom: 1px solid var(--accent);
+  letter-spacing: 0.06em;
+}
+
+/* 角色/姓名 cell (出现在很多对照表里) */
+.name-cell {
+  font-family: var(--display-cn);
+  font-weight: 500;
+  color: var(--accent-deep);
+  white-space: nowrap;
+  width: 1%;  /* 让 name-cell 收紧到内容宽度, 别的列分余宽 */
+  padding-right: 16px;
+}
+
+/* 订单簿示意表 (.buy-side / .price-col / .sell-side) */
+.buy-side {
+  text-align: right;
+  font-family: var(--serif-cn);
+  color: var(--ink);
+}
+.price-col {
+  text-align: center;
+  font-family: var(--display-en);
+  font-style: italic;
+  color: var(--accent-deep);
+  font-weight: 500;
+  background: rgba(139, 58, 42, 0.04);
+  width: 1%;
+  white-space: nowrap;
+  padding: 6px 14px;
+}
+.sell-side {
+  text-align: left;
+  font-family: var(--serif-cn);
+  color: var(--ink);
+}
+
+/* ============================================================
+   17c. 故事人物名 (.role-name)
+   故事章节里出现的人物: Jennifer, Bob, Lisa, Sam 等
+   用细微的 italic + 棕红, 让眼睛能在长段中识别"角色出现"
+   ============================================================ */
+.role-name {
+  font-family: var(--display-en);
+  font-style: italic;
+  font-weight: 500;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+  /* 不加额外背景, 视觉重量适度 */
+}
+
+/* ============================================================
+   17d. 译者注引用 (.tn-ref) — 正文里的"[译者注 N]"上标
+   ============================================================ */
+.tn-ref {
+  display: inline-block;
+  font-family: var(--display-en);
+  font-style: italic;
+  font-size: 0.78em;
+  color: var(--accent);
+  vertical-align: super;
+  line-height: 1;
+  margin: 0 0.1em;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+}
+
+/* ============================================================
+   17e. 数学公式块 (.math-block)
+   ============================================================ */
+.math-block {
+  font-family: 'Cambria Math', 'STIX Two Math', Georgia, serif;
+  font-size: 14.5px;
+  line-height: 2.0;
+  text-align: center;
+  margin: 16px 0;
+  padding: 12px 16px;
+  background: rgba(139, 58, 42, 0.025);
+  border-left: 2px solid var(--accent);
+  color: var(--ink);
+  break-inside: avoid-column;
+}
+.math-block sub, .math-block sup {
+  font-size: 0.75em;
+}
+.math-block em {
+  font-style: italic;
+  color: var(--accent-deep);
+}
+
+/* ============================================================
+   17f. 引文 / 边栏引用 / 来源
+   ============================================================ */
+.quote-text {
+  font-family: var(--serif-cn);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--ink-soft);
+  border-left: 3px solid var(--hairline);
+  padding-left: 16px;
+  margin: 14px 0;
+}
+.source-note, .sidebar-source, .sidebar-footnote {
+  font-family: var(--serif-en);
+  font-style: italic;
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.footnote {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+  border-top: 1px solid var(--hairline);
+  padding-top: 8px;
+  margin-top: 12px;
+}
+
+/* ============================================================
+   17g. 报价示意 / 简短数据列 (.qd-cn / .qd-en / .qd-desc)
+   类似术语条目但更紧凑
+   ============================================================ */
+.qd-cn {
+  font-family: var(--display-cn);
+  font-weight: 500;
+  color: var(--accent);
+  margin-right: 0.4em;
+}
+.qd-en {
+  font-family: var(--display-en);
+  font-style: italic;
+  color: var(--accent-deep);
+  font-size: 0.92em;
+  margin-right: 0.4em;
+}
+.qd-desc {
+  font-family: var(--serif-cn);
+  font-weight: 300;
+  color: var(--ink);
+}
+
+/* ============================================================
+   17h. 步骤列表 / 子标题 / 总计
+   ============================================================ */
+.step-list {
+  margin: 16px 0;
+  padding-left: 24px;
+}
+.step-list li {
+  margin-bottom: 8px;
+  line-height: 1.85;
+}
+.subhead {
+  font-family: var(--display-cn);
+  font-weight: 600;
+  color: var(--accent-deep);
+  font-size: 14.5px;
+  margin: 14px 0 6px 0;
+  letter-spacing: 0.04em;
+}
+.total {
+  font-weight: 500;
+  color: var(--accent);
+  border-top: 1.5px solid var(--accent);
+  font-family: var(--display-cn);
+}
+
+/* ============================================================
+   17i. 罕见用法的 class: 简单兜底, 防止裸渲染
+   ============================================================ */
+.folio-roman {
+  font-family: var(--serif-en);
+  font-style: italic;
+  letter-spacing: 0.12em;
+}
+.where {
+  font-family: var(--serif-cn);
+  font-style: italic;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+.orderbook {
+  /* 订单簿表格容器, 内部已有 .buy-side/.price-col/.sell-side, 这里只设 wrapper */
+  margin: 18px auto;
+  max-width: 540px;
+  break-inside: avoid-column;
+}
+.luck-skill-matrix, .luck-skill-caption {
+  /* 运气-技能矩阵 (出现 1 次) */
+  font-family: var(--serif-cn);
+  font-size: 13px;
+}
+.axis-line, .axis-arrow-fill, .ax-cn, .ax-en, .ax-end-cn, .ax-end-en {
+  /* SVG 轴标签的辅助 class, 在 inline SVG 里用, 只设 font 兜底 */
+  font-family: var(--serif-en);
+  font-style: italic;
+  font-size: 11px;
+}
+.ax-cn, .ax-end-cn {
+  font-family: var(--serif-cn);
+  font-style: normal;
+}
+
+/* ============================================================
    18. 响应式: 桌面 / 平板 / 手机
    ============================================================ */
 
 /* 桌面: 默认 (≥ 1024px) */
 @media (min-width: 1024px) {
   :root {
-    --body-font: 15.5px;
-    --body-line: 1.92;
+    --body-font: 16px;
+    --body-line: 1.95;
     --page-pad-x: 96px;
     --page-pad-y: 88px;
   }
@@ -1261,8 +1604,8 @@ strong {
 /* 平板竖屏 (768-1023) */
 @media (min-width: 768px) and (max-width: 1023px) {
   :root {
-    --body-font: 15px;
-    --body-line: 1.88;
+    --body-font: 15.8px;
+    --body-line: 1.92;
     --page-pad-x: 64px;
     --page-pad-y: 72px;
   }
@@ -1280,7 +1623,7 @@ strong {
 @media (max-width: 767px) {
   :root {
     --body-font: 16px;
-    --body-line: 1.85;
+    --body-line: 1.9;
     --page-pad-x: 24px;
     --page-pad-y: 56px;
   }
@@ -1476,6 +1819,182 @@ strong {
   color: var(--muted);
   letter-spacing: 0.16em;
   text-transform: uppercase;
+}
+
+/* ============================================================
+   21. 竖版连续阅读器
+
+   性能优先模式: 不做运行时真分页, 不使用横向书页队列,
+   所有内容保持在正常文档流里, 避免 overflow:hidden 裁切正文/边栏.
+   ============================================================ */
+.reader.scroll-reader {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: calc(40px + env(safe-area-inset-top)) 1fr;
+  background: var(--bg-outer);
+}
+
+.reader.scroll-reader .reader-top {
+  display: grid;
+  grid-template-columns: auto minmax(80px, auto) 1fr auto auto;
+  gap: 14px;
+  align-items: end;
+  height: auto;
+  padding: env(safe-area-inset-top) 22px 8px;
+}
+
+.reader.scroll-reader .progress-bar {
+  margin: 0;
+}
+
+.reader.scroll-reader .reader-stage {
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  padding: 18px 0 44px;
+}
+
+.reader.scroll-reader .book {
+  position: static;
+  inset: auto;
+  display: block;
+  width: min(920px, calc(100vw - 32px));
+  margin: 0 auto;
+  transform: none !important;
+  transition: none;
+  will-change: auto;
+}
+
+.reader.scroll-reader .page,
+.reader.scroll-reader .book.dual .page {
+  width: 100% !important;
+  height: auto !important;
+  min-height: auto;
+  margin: 0 0 18px 0 !important;
+  padding: var(--page-pad-y, 88px) var(--page-pad-x, 96px);
+  overflow: visible;
+  box-shadow: 0 2px 14px var(--shadow);
+}
+
+.reader.scroll-reader .page::before,
+.reader.scroll-reader .page::after {
+  display: none;
+}
+
+.reader.scroll-reader .blank-spacer,
+.reader.scroll-reader .edge-tap,
+.reader.scroll-reader .reader-bottom,
+.reader.scroll-reader #dual-toggle,
+.reader.scroll-reader .folio-wrap {
+  display: none !important;
+}
+
+.reader.scroll-reader .chapter-stream,
+.reader.scroll-reader .chapter-body-content,
+.reader.scroll-reader .toc-content,
+.reader.scroll-reader .copyright-content {
+  height: auto !important;
+  max-height: none;
+  column-count: 1 !important;
+  column-width: auto !important;
+  column-gap: 0 !important;
+  overflow: visible !important;
+  padding-top: 0;
+}
+
+.reader.scroll-reader .stream-window {
+  position: static;
+  overflow: visible;
+}
+
+.reader.scroll-reader .running-head,
+.reader.scroll-reader .folio {
+  display: none !important;
+}
+
+.reader.scroll-reader .book img,
+.reader.scroll-reader .book svg,
+.reader.scroll-reader .book canvas,
+.reader.scroll-reader .book iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+.reader.scroll-reader .book table,
+.reader.scroll-reader .book .book-table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.reader.scroll-reader .book pre {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}
+
+.reader.scroll-reader .tr-note,
+.reader.scroll-reader .tr-note-head,
+.reader.scroll-reader .tr-note-p {
+  break-before: auto;
+  break-after: auto;
+  break-inside: auto;
+  page-break-before: auto;
+  page-break-after: auto;
+  page-break-inside: auto;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+  clear: both;
+}
+
+.reader.scroll-reader .tr-note {
+  display: block;
+}
+
+@media (max-width: 767px) {
+  .reader.scroll-reader {
+    position: fixed;
+    display: grid;
+    height: 100vh;
+  }
+
+  .reader.scroll-reader .reader-top {
+    grid-template-columns: auto auto 1fr auto;
+    gap: 10px;
+    padding: env(safe-area-inset-top) 12px 7px;
+    background: rgba(232, 223, 210, 0.94);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .reader.scroll-reader .crumb-cn {
+    max-width: 34vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .reader.scroll-reader .crumb-en {
+    display: none;
+  }
+
+  .reader.scroll-reader .reader-stage {
+    padding: 8px 0 28px;
+  }
+
+  .reader.scroll-reader .book {
+    width: 100%;
+  }
+
+  .reader.scroll-reader .page,
+  .reader.scroll-reader .book.dual .page {
+    margin: 0 0 8px 0 !important;
+    box-shadow: 0 1px 6px var(--shadow);
+  }
 }
 
 </style>
@@ -18179,39 +18698,8 @@ Iomega 历史最高收盘价出现在 1996 年 5 月 23 日——股票于其前
     if (window.DEBUG_READER) console.log('[init] called, isMobile=' + (window.innerWidth < 768));
     try {
       detectViewport();
-      if (state.isMobile) {
-        initMobile();
-        hideLoading();
-        return;
-      }
-      // 横屏自动 dual: 宽 ≥ 1024 且宽 > 高 (iPad 横屏自动对开, iPhone 始终单页)
-      // 1280 是历史最低 dual 门槛 (来自 320px 起的早期实现);
-      // 现在为了让 iPad 11"/mini 横屏 (1180×820) 也进 dual, 降到 1024.
-      const vw = window.innerWidth;
-      const vh = window.innerHeight;
-      if (vw >= 1024 && vw > vh) {
-        state.isDual = true;
-      }
-      buildReaderShell();
-      if (window.DEBUG_READER) console.log('[init] shell built');
-      collectPages();
-      if (window.DEBUG_READER) console.log('[init] pages collected:', state.pages.length);
-      // 初次 layout: 等字体加载或最多 1.2s 超时,以先到为准
-      const fontPromise = Promise.race([
-        (document.fonts && document.fonts.ready) || Promise.resolve(),
-        new Promise(resolve => setTimeout(resolve, 1200))
-      ]);
-      fontPromise.then(() => {
-        try {
-          if (window.DEBUG_READER) console.log('[init] fonts ready, layoutAll');
-          layoutAll();
-          hideLoading();
-        } catch (e) {
-          console.error('layoutAll error:', e);
-          hideLoading();
-        }
-      });
-      bindEvents();
+      initScrollReader();
+      hideLoading();
     } catch (e) {
       console.error('init error:', e);
       hideLoading();
@@ -18227,6 +18715,225 @@ Iomega 历史最高收盘价出现在 1996 年 5 月 23 日——股票于其前
     if (loader) {
       loader.classList.add('hidden');
       setTimeout(() => loader.remove(), 600);
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // 模块: 竖版连续阅读器
+  // 不再运行全书真分页, 避免上千页 DOM 拆分和 overflow 裁切.
+  // ─────────────────────────────────────────────
+  function initScrollReader() {
+    buildScrollShell();
+    normalizeBookPages();
+    prepareScrollContent();
+    collectScrollAnchors();
+    bindScrollEvents();
+    updateScrollChrome();
+  }
+
+  function buildScrollShell() {
+    const body = document.body;
+    const loader = body.querySelector('.book-loading');
+    const pages = Array.from(body.querySelectorAll('.page'));
+
+    const reader = document.createElement('div');
+    reader.className = 'reader scroll-reader';
+    reader.innerHTML = `
+      <div class="reader-top">
+        <div class="reader-controls">
+          <button class="ctrl-btn icon" id="goto-cover" title="封面">⌂</button>
+          <button class="ctrl-btn icon" id="goto-toc" title="目录">≡</button>
+        </div>
+        <span class="crumb-cn"><span class="crumb-cn-text">交易与交易所</span></span>
+        <div class="progress-bar"><div class="progress-fill"></div></div>
+        <span class="crumb-en">Trading &amp; Exchanges</span>
+        <div class="reader-controls">
+          <button class="ctrl-btn icon" id="settings-toggle" title="字号">A</button>
+        </div>
+      </div>
+      <main class="reader-stage" tabindex="0">
+        <div class="book"></div>
+      </main>
+    `;
+
+    body.innerHTML = '';
+    if (loader) body.appendChild(loader);
+    body.appendChild(reader);
+
+    bookEl = reader.querySelector('.book');
+    stageEl = reader.querySelector('.reader-stage');
+    progressFillEl = reader.querySelector('.progress-fill');
+    crumbCnEl = reader.querySelector('.crumb-cn-text');
+    crumbEnEl = reader.querySelector('.crumb-en');
+
+    pages.forEach(page => bookEl.appendChild(page));
+
+    const panel = document.createElement('div');
+    panel.className = 'settings-panel';
+    panel.innerHTML = `
+      <div class="settings-row">
+        <span class="settings-label">字号</span>
+        <div class="settings-buttons">
+          <button class="settings-btn" data-scale="0.92">A−</button>
+          <button class="settings-btn active" data-scale="1.0">A</button>
+          <button class="settings-btn" data-scale="1.10">A+</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <span class="settings-label">阅读</span>
+        <span class="settings-label" style="font-size:11px;">竖版连续滚动</span>
+      </div>
+    `;
+    document.body.appendChild(panel);
+    settingsPanel = panel;
+  }
+
+  function normalizeBookPages() {
+    const pages = Array.from(bookEl.querySelectorAll('.page'));
+    const fragment = document.createDocumentFragment();
+    pages.forEach(page => fragment.appendChild(page));
+    bookEl.innerHTML = '';
+    bookEl.appendChild(fragment);
+  }
+
+  function prepareScrollContent() {
+    removeRectoSpacers();
+    bookEl.querySelectorAll('.folio, .running-head').forEach(el => el.remove());
+
+    bookEl.querySelectorAll('.page.chapter-body').forEach(page => {
+      if (page.querySelector(':scope > .chapter-stream')) return;
+      const stream = document.createElement('div');
+      stream.className = 'chapter-stream';
+      while (page.firstChild) stream.appendChild(page.firstChild);
+      page.appendChild(stream);
+    });
+
+    bookEl.querySelectorAll('.chapter-stream, .chapter-body-content, .toc-content, .copyright-content').forEach(el => {
+      el.style.transform = '';
+    });
+  }
+
+  function collectScrollAnchors() {
+    const anchors = [];
+    Array.from(bookEl.querySelectorAll('.page')).forEach(el => {
+      let titleCn = '';
+      let titleEn = '';
+      if (el.classList.contains('cover')) {
+        titleCn = '交易与交易所';
+        titleEn = 'Trading & Exchanges';
+      } else if (el.classList.contains('toc')) {
+        titleCn = '目录';
+        titleEn = 'Contents';
+      } else if (el.classList.contains('copyright')) {
+        titleCn = '版权与说明';
+        titleEn = 'Copyright';
+      } else if (el.classList.contains('part-opener')) {
+        titleCn = (el.querySelector('.part-title-cn') || {}).textContent || '部分扉页';
+        titleEn = (el.querySelector('.part-title-en') || {}).textContent || '';
+      } else if (el.classList.contains('chapter-opener')) {
+        titleCn = (el.querySelector('.chapter-title-cn') || {}).textContent || '';
+        titleEn = (el.querySelector('.chapter-title-en') || {}).textContent || '';
+      }
+      if (titleCn || titleEn) anchors.push({ el, titleCn, titleEn });
+    });
+    state.chapters = anchors;
+  }
+
+  function bindScrollEvents() {
+    const coverBtn = document.getElementById('goto-cover');
+    const tocBtn = document.getElementById('goto-toc');
+    const settingsBtn = document.getElementById('settings-toggle');
+    if (coverBtn) coverBtn.addEventListener('click', () => scrollToElement(bookEl.querySelector('.page.cover') || bookEl));
+    if (tocBtn) tocBtn.addEventListener('click', () => scrollToElement(bookEl.querySelector('.page.toc') || bookEl));
+    if (settingsBtn) settingsBtn.addEventListener('click', () => settingsPanel.classList.toggle('show'));
+
+    settingsPanel.querySelectorAll('[data-scale]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        settingsPanel.querySelectorAll('[data-scale]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.fontScale = parseFloat(btn.dataset.scale);
+        document.documentElement.style.setProperty(
+          '--body-font',
+          (16 * state.fontScale).toFixed(1) + 'px'
+        );
+        updateScrollChrome();
+      });
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!settingsPanel.contains(e.target) && settingsBtn && !settingsBtn.contains(e.target)) {
+        settingsPanel.classList.remove('show');
+      }
+    });
+
+    let ticking = false;
+    stageEl.addEventListener('scroll', () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        updateScrollChrome();
+        ticking = false;
+      });
+    }, { passive: true });
+
+    window.addEventListener('keydown', (e) => {
+      if (settingsPanel && settingsPanel.classList.contains('show') && e.key === 'Escape') {
+        settingsPanel.classList.remove('show');
+        return;
+      }
+      if (['ArrowDown', 'PageDown', ' '].includes(e.key)) {
+        e.preventDefault();
+        stageEl.scrollBy({ top: stageEl.clientHeight * 0.86, behavior: 'smooth' });
+      } else if (['ArrowUp', 'PageUp'].includes(e.key)) {
+        e.preventDefault();
+        stageEl.scrollBy({ top: -stageEl.clientHeight * 0.86, behavior: 'smooth' });
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        stageEl.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        stageEl.scrollTo({ top: stageEl.scrollHeight, behavior: 'smooth' });
+      }
+    });
+
+    document.querySelectorAll('.toc-entry').forEach(entry => {
+      entry.style.cursor = 'pointer';
+      entry.addEventListener('click', () => {
+        const ttlText = entry.querySelector('.ttl');
+        if (!ttlText) return;
+        const titleStr = (ttlText.firstChild || ttlText).textContent.trim().replace(/\s+/g, '');
+        const target = Array.from(bookEl.querySelectorAll('.chapter-opener')).find(el => {
+          const cnEl = el.querySelector('.chapter-title-cn');
+          return cnEl && cnEl.textContent.replace(/\s+/g, '').includes(titleStr);
+        });
+        if (target) scrollToElement(target);
+      });
+    });
+  }
+
+  function scrollToElement(el) {
+    if (!el) return;
+    stageEl.scrollTo({
+      top: Math.max(0, el.offsetTop - 18),
+      behavior: 'smooth',
+    });
+  }
+
+  function updateScrollChrome() {
+    if (!stageEl) return;
+    const max = Math.max(1, stageEl.scrollHeight - stageEl.clientHeight);
+    const pct = Math.min(100, Math.max(0, (stageEl.scrollTop / max) * 100));
+    if (progressFillEl) progressFillEl.style.width = pct.toFixed(2) + '%';
+
+    let current = state.chapters && state.chapters[0];
+    const marker = stageEl.scrollTop + 80;
+    for (const ch of state.chapters || []) {
+      if (ch.el.offsetTop <= marker) current = ch;
+      else break;
+    }
+    if (current) {
+      if (crumbCnEl) crumbCnEl.textContent = (current.titleCn || '交易与交易所').replace(/\s+/g, '');
+      if (crumbEnEl) crumbEnEl.textContent = current.titleEn || 'Trading & Exchanges';
     }
   }
 
@@ -18482,7 +19189,7 @@ Iomega 历史最高收盘价出现在 1996 年 5 月 23 日——股票于其前
     if (state.fontScale !== 1.0) {
       document.documentElement.style.setProperty(
         '--body-font',
-        (15.5 * state.fontScale).toFixed(1) + 'px'
+        (16 * state.fontScale).toFixed(1) + 'px'
       );
     }
   }
@@ -18556,7 +19263,39 @@ Iomega 历史最高收盘价出现在 1996 年 5 月 23 日——股票于其前
       ? (parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--dual-page-w')) || state.pageWidth)
       : state.pageWidth;
     const colWidth = effectivePageW - padX * 2;
-    const colHeight = state.pageHeight - padY * 2;
+    // 测量列高比实际 page 内容区略小, 给 sidebar margin/margin-collapse/subpixel 等
+    // 实际渲染差异留余地. 30px 余量 ≈ 1.5 行正文.
+    const colHeight = state.pageHeight - padY * 2 - 30;
+
+    function sidebarFitsOneColumn(sidebarEl) {
+      const host = document.createElement('div');
+      host.style.cssText = `
+        position: absolute;
+        visibility: hidden;
+        left: -99999px;
+        top: 0;
+        width: ${colWidth}px;
+        font-family: var(--serif-cn);
+        font-weight: 300;
+        font-size: var(--body-font);
+        line-height: var(--body-line);
+        color: var(--ink);
+        text-align: justify;
+        letter-spacing: 0.02em;
+      `;
+      const probe = sidebarEl.cloneNode(true);
+      host.appendChild(probe);
+      document.body.appendChild(host);
+      void probe.offsetHeight;
+      const rect = probe.getBoundingClientRect();
+      const style = getComputedStyle(probe);
+      const totalHeight = rect.height +
+        (parseFloat(style.marginTop) || 0) +
+        (parseFloat(style.marginBottom) || 0);
+      const fits = totalHeight <= colHeight && rect.width <= colWidth + 40;
+      host.remove();
+      return fits;
+    }
     
     // 对每个 original 做分页
     state.chapterBodyOriginals.forEach((orig, origIdx) => {
@@ -18570,33 +19309,72 @@ Iomega 历史最高收盘价出现在 1996 年 5 月 23 日——股票于其前
       const folio = original.querySelector(':scope > .folio');
       
       // 收集需要分页的内容节点 (除 running-head/folio 外的所有子节点)
-      // 特殊处理 .tr-note: 它内部多个 p 总高常超过一列, 整体当一个 child
-      // 会被 column-fill 当一组 break-inside-avoid 推到一列内, 但内容溢出被裁.
-      // 解决: 把 .tr-note 拆开 — 第一个 p 前注入 .tn-label-marker (含"译者注"+border),
-      // 后续 p 都独立成兄弟节点参与 column 分页.
+      // 特殊处理: 包了多个段落/项目的容器, 整体高度可能超过一列, 默认 break-inside-avoid
+      // 会被 column-fill 推到单列、超出部分被裁. 解决: 展平 — 把内部多个段落/项提到顶级当 sibling.
       const contentNodes = [];
       Array.from(original.childNodes).forEach(n => {
         if (n === runningHead || n === folio) return;
+        // .tr-note: 展开为 .tr-note-head + N 个 .tr-note-p
         if (n.nodeType === 1 && n.classList && n.classList.contains('tr-note')) {
-          // 展平 .tr-note: 把 .tn-label 提出来当独立节点, p 子级也独立
           const label = n.querySelector(':scope > .tn-label');
           const ps = Array.from(n.querySelectorAll(':scope > p'));
-          // 把 label 转成 div 包裹器 (保留 .tr-note border-top + padding-top)
-          // 简单做: 把第一个 p 加 .tn-first 类 (CSS 处理 border-top + label inline)
           if (ps.length > 0) {
-            // 创建一个新的 .tr-note-head 节点带 label
             if (label) {
               const head = document.createElement('div');
               head.className = 'tr-note-head';
               head.appendChild(label.cloneNode(true));
               contentNodes.push(head);
             }
-            // 每个 p 用 .tr-note-p 类标记 (CSS 继承 .tr-note p 的样式)
             ps.forEach(p => {
               p.classList.add('tr-note-p');
               contentNodes.push(p);
             });
           }
+          return;
+        }
+        // .theme-list / .term-list: 含 .theme-item / .term-item, 同模式展平
+        if (n.nodeType === 1 && n.classList &&
+            (n.classList.contains('theme-list') || n.classList.contains('term-list'))) {
+          const items = Array.from(n.children);
+          items.forEach(item => contentNodes.push(item));
+          return;
+        }
+        // .bullet-list (ul): 把每个 li 转成段落级独立节点
+        if (n.nodeType === 1 && n.tagName === 'UL' && n.classList && n.classList.contains('bullet-list')) {
+          // 保留 ul 容器但允许跨列: 给 ul 设 inline style 移除 break-inside
+          n.style.breakInside = 'auto';
+          contentNodes.push(n);
+          return;
+        }
+        // .sidebar: 短的保留视觉容器, 长的 (文字 > 600 或 children > 6) 展平防被裁.
+        // 展平后用 .sidebar-flat-head 标头 + .sidebar-flat-body 包内容, CSS 仍保留淡棕红
+        // 左边线视觉提示, 但失去 border-box 容器感. 内容完整可见 > 视觉容器, 这是取舍.
+        if (n.nodeType === 1 && n.classList && n.classList.contains('sidebar')) {
+          const totalText = n.textContent.length;
+          const sbChildren = Array.from(n.children);
+          const visibleChildren = sbChildren.filter(c => 
+            !(c.classList && c.classList.contains('sidebar-end'))
+          );
+          if (totalText > 600 || visibleChildren.length > 6 || !sidebarFitsOneColumn(n)) {
+            // 展平
+            const title = n.querySelector(':scope > .sidebar-title');
+            const titleEn = n.querySelector(':scope > .sidebar-title-en');
+            if (title) {
+              const head = document.createElement('div');
+              head.className = 'sidebar-flat-head';
+              head.appendChild(title.cloneNode(true));
+              if (titleEn) head.appendChild(titleEn.cloneNode(true));
+              contentNodes.push(head);
+            }
+            sbChildren.forEach(child => {
+              if (child === title || child === titleEn) return;
+              if (child.classList && child.classList.contains('sidebar-end')) return;
+              child.classList.add('sidebar-flat-body');
+              contentNodes.push(child);
+            });
+            return;
+          }
+          contentNodes.push(n);
           return;
         }
         contentNodes.push(n);
@@ -18709,16 +19487,66 @@ Iomega 历史最高收盘价出现在 1996 年 5 月 23 日——股票于其前
         if (window.DEBUG_READER) {
           console.error(`[split] ch ${origIdx}: original not in bookEl! parent=${original.parentNode && original.parentNode.tagName}`);
         }
-        // 直接 append 到 bookEl 末尾
         derivedPages.forEach(pg => bookEl.appendChild(pg));
       } else {
         derivedPages.forEach(pg => bookEl.insertBefore(pg, original));
-        // detach original (保留引用以便恢复)
         original.remove();
       }
       
+      // ── 溢出后修正 (B 方案 v2) ──
+      // measure 阶段的 column-fill 计算与实际派生 page 渲染有微小偏差,
+      // 偶尔某 page 的总高 > page 高度, 或 multi-column 把末尾块横向碎片化到
+      // 隐藏列里, 末尾都会被 overflow:hidden 裁掉. 修正: 遍历每页, 发现
+      // 纵向或横向溢出时把末尾 children 移到下一页 (新建若需要).
+      // 死循环防御: 单个 child 比 page 还高时 (如超长 sidebar), 放弃移动这个 child
+      // 否则会无限创建空 page. 长 sidebar 会在进入分页前展平为 sidebar-flat-*.
+      if (kind === 'body') {
+        let totalMoved = 0;
+        const MAX_MOVES_PER_CHAPTER = 100;  // 防止灾难性死循环
+        for (let i = 0; i < derivedPages.length && totalMoved < MAX_MOVES_PER_CHAPTER; i++) {
+          const pg = derivedPages[i];
+          const content = pg.querySelector('.chapter-body-content');
+          if (!content) continue;
+          const hasOverflow = () => (
+            content.scrollHeight > content.clientHeight + 2 ||
+            content.scrollWidth > content.clientWidth + Math.max(40, content.clientWidth * 0.15)
+          );
+          let pageMoved = 0;
+          while (hasOverflow()
+                 && content.children.length > 1
+                 && pageMoved < 20) {
+            const last = content.lastElementChild;
+            if (!last) break;
+            // 单 child 太大检查: 如果 last 自己就高于 page 且不是横向碎片化,
+            // 移到下页也没用 -> 放弃移动
+            if (last.offsetHeight > content.clientHeight &&
+                last.offsetWidth <= content.clientWidth + 2) {
+              if (window.DEBUG_READER) {
+                console.warn(`[split] ch ${origIdx} pg ${i}: 单个 child (${last.tagName}.${last.className.substring(0,20)}) 高度 ${last.offsetHeight} > page ${content.clientHeight}, 放弃移动`);
+              }
+              break;
+            }
+            // 创建/取下一个派生 page
+            let nextPg = derivedPages[i + 1];
+            if (!nextPg) {
+              nextPg = createDerivedPage(original, runningHead, [], origIdx, derivedPages.length, derivedPages.length + 1, kind);
+              derivedPages.push(nextPg);
+              if (pg.nextSibling) bookEl.insertBefore(nextPg, pg.nextSibling);
+              else bookEl.appendChild(nextPg);
+            }
+            const nextContent = nextPg.querySelector('.chapter-body-content');
+            nextContent.insertBefore(last, nextContent.firstChild);
+            pageMoved++;
+            totalMoved++;
+          }
+        }
+        if (window.DEBUG_READER && totalMoved > 0) {
+          console.log(`[split] ch ${origIdx}: 溢出修正 ${totalMoved} children, 共 ${derivedPages.length} pages`);
+        }
+      }
+      
       if (window.DEBUG_READER) {
-        console.log(`[split] ch ${origIdx}: ${finalColCount} pages, content nodes=${contentNodes.length}`);
+        console.log(`[split] ch ${origIdx}: ${derivedPages.length} pages, content nodes=${contentNodes.length}`);
       }
     });
     
